@@ -12,14 +12,14 @@ class Range {
 
 template <class Functor>
 struct TransformWrap {
-  TransformWrap(Functor functor) : functor_(std::forward<Functor>(functor)) {}
+  TransformWrap(Functor&& functor) : functor_(std::forward<Functor>(functor)) {}
   using Functor_Type = Functor;
   Functor functor_;
 };
 
 template <class Functor>
 auto transform(Functor&& functor) -> TransformWrap<Functor> {
-  return TransformWrap<Functor>(functor);
+  return TransformWrap<Functor>(std::forward<Functor>(functor));
 }
 
 template <class Container, class Functor>
@@ -29,7 +29,7 @@ class TransformRange {
       : container_(std::forward<Container>(container)),
         functor_(std::forward<Functor>(functor)) {}
 
-  using value_type = typename std::result_of_t<Functor(
+  using value_type = typename std::result_of_t<std::remove_reference_t<Functor>(
       typename std::remove_reference_t<Container>::value_type)>;
 
   template <class Iterator>
@@ -75,6 +75,18 @@ TransformRange<Container, Functor> operator|(
       std::forward<Container>(container),
       std::forward<Functor>(transform_wrap.functor_));
 }
+
+/*
+template < class T>
+ReduceWrap reduce(T&& initial_value) {
+
+}
+
+tmeplate <class T, class BinaryFunctor>
+ReduceWrap reduce(T&& initial_value, BinaryFunctor&& binary_functor) {
+
+}
+*/
 }  // namespace View
 }  // namespace fp
 #endif  // FUNCTION_PROGRAM_H_
