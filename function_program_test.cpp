@@ -11,6 +11,12 @@ TEST(FP, TRANSFORM) {
         EXPECT_EQ(*begin, 2 * count);
         count++;
     }
+    count = 1;
+
+    for(auto begin = trans.begin(); begin != trans.end(); ++begin) {
+        EXPECT_EQ(*begin, 2 * count);
+        count++;
+    }
 }
 int main() {
     testing::InitGoogleTest();
