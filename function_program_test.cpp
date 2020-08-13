@@ -39,7 +39,10 @@ TEST(FP, GET_KEY_VALUE) {
     for ( auto v : key_res) {
         key_sum += v;
     }
+    int sum = key_res | fp::View::reduce(0);
+
     EXPECT_EQ(key_sum, (0 + 1023) * 1024 / 2);
+    EXPECT_EQ(sum, (0 + 1023) * 1024 / 2);
     for (auto v : value_res) {
         value_sum += v;
     }

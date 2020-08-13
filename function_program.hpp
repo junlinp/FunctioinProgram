@@ -1,5 +1,6 @@
 #ifndef FUNCTION_PROGRAM_H_
 #define FUNCTION_PROGRAM_H_
+#include <numeric>
 namespace fp {
 namespace View {
 
@@ -58,9 +59,15 @@ class TransformRange {
   const_iterator begin() const noexcept {
     return const_iterator(container_.begin(), functor_);
   }
+  const_iterator cbegin() const noexcept {
+    return const_iterator(container_.cbegin(), functor_);
+  }
 
   const_iterator end() const noexcept {
     return const_iterator(container_.end(), functor_);
+  }
+  const_iterator cend() const noexcept {
+    return const_iterator(container_.cend(), functor_);
   }
 
  private:
@@ -97,17 +104,57 @@ auto operator|(Container&& container, GetValue) {
     };
     return TransformRange<Container, Functor>(std::forward<Container>(container), std::move(functor));
 }
-/*
+
+
+template <class T>
+struct ReduceIndicator {
+
+    ReduceIndicator(T&& value) : value_(std::forward<T>(value)) {}
+    T value_;
+};
+
 template < class T>
-ReduceWrap reduce(T&& initial_value) {
-
+ReduceIndicator<T> reduce(T&& initial_value) {
+    return ReduceIndicator<T>(std::forward<T>(initial_value));
 }
 
-tmeplate <class T, class BinaryFunctor>
-ReduceWrap reduce(T&& initial_value, BinaryFunctor&& binary_functor) {
-
+template <class Container, class T>
+T operator|(Container&& container, ReduceIndicator<T>&& indicator) {
+    return std::accumulate(container.cbegin(), container.cend(), indicator.value_);
 }
-*/
+
+template <class T, class BinaryFunctor>
+struct ReduceFunctorIndicator {
+    ReduceFunctorIndicator(T&& initial_value, BinaryFunctor&& plus_op) : 
+        value_(std::forward<T>(initial_value)), 
+        plus_op_(std::forward<BinaryFunctor>(plus_op)) {}
+
+    T value_;
+    BinaryFunctor plus_op_;
+};
+
+/**
+ * 
+ *  binary_functor will be:
+ *  Ret binary_functor(const Type1& a, const Type2& b)
+ *  The signature does not need to have const &.
+ *  The type Type1 must be such that an object of type T can be implicitly converted to Type1. 
+ *  The type Type2 must be such that an object of type InputIt can be dereferenced and then implicitly converted to Type2. 
+ *  The type Ret must be such that an object of type T can be assigned a value of type Ret.​
+ */
+template <class T, class BinaryFunctor>
+auto reduce(T&& initial_value, BinaryFunctor&& binary_functor) {
+    return ReduceFunctorIndicator<T, BinaryFunctor>(
+        std::forward<T>(initial_value),
+        std::forward<BinaryFunctor>(binary_functor)
+    );
+}
+template <class Container, class T, class BinaryFunctor>
+auto operator|(Container&& container, ReduceFunctorIndicator<T, BinaryFunctor>&& indicator) {
+    return std::accumulate(container.cbegin(), container.cend(), indicator.value_, indicator.plus_op_);
+}
+
+
 }  // namespace View
 }  // namespace fp
 #endif  // FUNCTION_PROGRAM_H_
