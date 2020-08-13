@@ -50,6 +50,11 @@ TEST(FP, GET_KEY_VALUE) {
     EXPECT_EQ(value_sum, (0 + 2046) * 1024 / 2);
     
 }
+
+TEST(FP, FILTER) {
+
+}
+
 int main() {
     testing::InitGoogleTest();
     return RUN_ALL_TESTS();

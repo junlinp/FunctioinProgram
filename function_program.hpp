@@ -109,7 +109,7 @@ auto operator|(Container&& container, GetValue) {
 template <class T>
 struct ReduceIndicator {
 
-    ReduceIndicator(T&& value) : value_(std::forward<T>(value)) {}
+    constexpr ReduceIndicator(T&& value) : value_(std::forward<T>(value)) {}
     T value_;
 };
 
@@ -154,6 +154,31 @@ auto operator|(Container&& container, ReduceFunctorIndicator<T, BinaryFunctor>&&
     return std::accumulate(container.cbegin(), container.cend(), indicator.value_, indicator.plus_op_);
 }
 
+template <class Functor>
+struct FilterIndicator {
+    FilterIndicator(Functor&& unary_functor) : functor_(std::forward<Functor>(unary_functor)) {}
+    Functor functor_;
+};
+template <class Functor>
+FilterIndicator<Functor> filter(Functor&& unary_functor) {
+    return FilterIndicator<Functor>(std::forward<Functor>(unary_functor));
+}
+
+template<class Container, class Functor>
+class FilterRange {
+
+    private:
+    Container container_;
+    Functor functor_;   
+};
+
+template<class Container, class Functor>
+auto operator|(Container&& container, FilterIndicator<Functor>&& indicator) {
+    return FilterRange<Container, Functor>(
+        std::forward<Container>(container),
+        std::forward<Functor>(indicator.functor_)
+    );
+}
 
 }  // namespace View
 }  // namespace fp
