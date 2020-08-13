@@ -25,6 +25,28 @@ TEST(FP, TRANSFORM) {
         count++;
     }
 }
+
+TEST(FP, GET_KEY_VALUE) {
+    std::map<int, int> map_;
+    for(int i = 0; i < 1024; i++) {
+        map_[i] = 2 * i;
+    }
+
+    auto key_res = map_ | fp::View::GetKey();
+    auto value_res = map_ | fp::View::GetValue();
+
+    int key_sum = 0, value_sum = 0;
+    for ( auto v : key_res) {
+        key_sum += v;
+    }
+    EXPECT_EQ(key_sum, (0 + 1023) * 1024 / 2);
+    for (auto v : value_res) {
+        value_sum += v;
+    }
+
+    EXPECT_EQ(value_sum, (0 + 2046) * 1024 / 2);
+    
+}
 int main() {
     testing::InitGoogleTest();
     return RUN_ALL_TESTS();

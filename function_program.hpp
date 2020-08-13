@@ -76,6 +76,27 @@ TransformRange<Container, Functor> operator|(
       std::forward<Functor>(transform_wrap.functor_));
 }
 
+struct GetKey{};
+struct GetValue{};
+
+template <class Container>
+auto operator|(Container&& container, GetKey) {
+    using Container_T = std::remove_reference_t<Container>;
+    using Functor = std::function<typename Container_T::key_type(const typename Container_T::value_type&)>;
+    Functor functor = [](const typename Container_T::value_type& element) {
+        return element.first;
+    };
+    return TransformRange<Container, Functor>(std::forward<Container>(container), std::move(functor));
+}
+template <class Container>
+auto operator|(Container&& container, GetValue) {
+    using Container_T = std::remove_reference_t<Container>;
+    using Functor = std::function<typename Container_T::mapped_type(const typename Container_T::value_type&)>;
+    Functor functor = [](const typename Container_T::value_type& element) {
+        return element.second;
+    };
+    return TransformRange<Container, Functor>(std::forward<Container>(container), std::move(functor));
+}
 /*
 template < class T>
 ReduceWrap reduce(T&& initial_value) {
