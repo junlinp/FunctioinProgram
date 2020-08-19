@@ -26,7 +26,7 @@ auto transform(Functor&& functor) -> TransformWrap<Functor> {
 template <class Container, class Functor>
 class TransformRange {
  public:
-  TransformRange(Container container, Functor functor)
+  TransformRange(Container&& container, Functor&& functor)
       : container_(std::forward<Container>(container)),
         functor_(std::forward<Functor>(functor)) {}
 
@@ -35,11 +35,12 @@ class TransformRange {
 
   template <class Iterator>
   class TransformRangeConstIterator
-      : std::iterator<std::forward_iterator_tag, const value_type> {
+      : public std::iterator<std::forward_iterator_tag, const value_type> {
    public:
     TransformRangeConstIterator(Iterator iterator, Functor functor)
         : input_iterator_(iterator), functor_(std::forward<Functor>(functor)) {}
-
+    TransformRangeConstIterator(const TransformRangeConstIterator& other)
+        : input_iterator_(other.input_iterator_), functor_(other.functor_) {}
     TransformRangeConstIterator& operator++() {
       ++input_iterator_;
       return *this;
@@ -83,101 +84,106 @@ TransformRange<Container, Functor> operator|(
       std::forward<Functor>(transform_wrap.functor_));
 }
 
-struct GetKey{};
-struct GetValue{};
+struct GetKey {};
+struct GetValue {};
 
 template <class Container>
 auto operator|(Container&& container, GetKey) {
-    using Container_T = std::remove_reference_t<Container>;
-    using Functor = std::function<typename Container_T::key_type(const typename Container_T::value_type&)>;
-    Functor functor = [](const typename Container_T::value_type& element) {
-        return element.first;
-    };
-    return TransformRange<Container, Functor>(std::forward<Container>(container), std::move(functor));
+  using Container_T = std::remove_reference_t<Container>;
+  using Functor = std::function<typename Container_T::key_type(
+      const typename Container_T::value_type&)>;
+  Functor functor = [](const typename Container_T::value_type& element) {
+    return element.first;
+  };
+  return TransformRange<Container, Functor>(std::forward<Container>(container),
+                                            std::move(functor));
 }
 template <class Container>
 auto operator|(Container&& container, GetValue) {
-    using Container_T = std::remove_reference_t<Container>;
-    using Functor = std::function<typename Container_T::mapped_type(const typename Container_T::value_type&)>;
-    Functor functor = [](const typename Container_T::value_type& element) {
-        return element.second;
-    };
-    return TransformRange<Container, Functor>(std::forward<Container>(container), std::move(functor));
+  using Container_T = std::remove_reference_t<Container>;
+  using Functor = std::function<typename Container_T::mapped_type(
+      const typename Container_T::value_type&)>;
+  Functor functor = [](const typename Container_T::value_type& element) {
+    return element.second;
+  };
+  return TransformRange<Container, Functor>(std::forward<Container>(container),
+                                            std::move(functor));
 }
-
 
 template <class T>
 struct ReduceIndicator {
-
-    constexpr ReduceIndicator(T&& value) : value_(std::forward<T>(value)) {}
-    T value_;
+  constexpr ReduceIndicator(T&& value) : value_(std::forward<T>(value)) {}
+  T value_;
 };
 
-template < class T>
+template <class T>
 ReduceIndicator<T> reduce(T&& initial_value) {
-    return ReduceIndicator<T>(std::forward<T>(initial_value));
+  return ReduceIndicator<T>(std::forward<T>(initial_value));
 }
 
 template <class Container, class T>
 T operator|(Container&& container, ReduceIndicator<T>&& indicator) {
-    return std::accumulate(container.cbegin(), container.cend(), indicator.value_);
+  return std::accumulate(container.cbegin(), container.cend(),
+                         indicator.value_);
 }
 
 template <class T, class BinaryFunctor>
 struct ReduceFunctorIndicator {
-    ReduceFunctorIndicator(T&& initial_value, BinaryFunctor&& plus_op) : 
-        value_(std::forward<T>(initial_value)), 
+  ReduceFunctorIndicator(T&& initial_value, BinaryFunctor&& plus_op)
+      : value_(std::forward<T>(initial_value)),
         plus_op_(std::forward<BinaryFunctor>(plus_op)) {}
 
-    T value_;
-    BinaryFunctor plus_op_;
+  T value_;
+  BinaryFunctor plus_op_;
 };
 
 /**
- * 
+ *
  *  binary_functor will be:
  *  Ret binary_functor(const Type1& a, const Type2& b)
  *  The signature does not need to have const &.
- *  The type Type1 must be such that an object of type T can be implicitly converted to Type1. 
- *  The type Type2 must be such that an object of type InputIt can be dereferenced and then implicitly converted to Type2. 
- *  The type Ret must be such that an object of type T can be assigned a value of type Ret.​
+ *  The type Type1 must be such that an object of type T can be implicitly
+ * converted to Type1. The type Type2 must be such that an object of type
+ * InputIt can be dereferenced and then implicitly converted to Type2. The type
+ * Ret must be such that an object of type T can be assigned a value of type
+ * Ret.​
  */
 template <class T, class BinaryFunctor>
 auto reduce(T&& initial_value, BinaryFunctor&& binary_functor) {
-    return ReduceFunctorIndicator<T, BinaryFunctor>(
-        std::forward<T>(initial_value),
-        std::forward<BinaryFunctor>(binary_functor)
-    );
+  return ReduceFunctorIndicator<T, BinaryFunctor>(
+      std::forward<T>(initial_value),
+      std::forward<BinaryFunctor>(binary_functor));
 }
 template <class Container, class T, class BinaryFunctor>
-auto operator|(Container&& container, ReduceFunctorIndicator<T, BinaryFunctor>&& indicator) {
-    return std::accumulate(container.cbegin(), container.cend(), indicator.value_, indicator.plus_op_);
+auto operator|(Container&& container,
+               ReduceFunctorIndicator<T, BinaryFunctor>&& indicator) {
+  return std::accumulate(container.cbegin(), container.cend(), indicator.value_,
+                         indicator.plus_op_);
 }
 
 template <class Functor>
 struct FilterIndicator {
-    FilterIndicator(Functor&& unary_functor) : functor_(std::forward<Functor>(unary_functor)) {}
-    Functor functor_;
+  FilterIndicator(Functor&& unary_functor)
+      : functor_(std::forward<Functor>(unary_functor)) {}
+  Functor functor_;
 };
 template <class Functor>
 FilterIndicator<Functor> filter(Functor&& unary_functor) {
-    return FilterIndicator<Functor>(std::forward<Functor>(unary_functor));
+  return FilterIndicator<Functor>(std::forward<Functor>(unary_functor));
 }
 
-template<class Container, class Functor>
+template <class Container, class Functor>
 class FilterRange {
-
-    private:
-    Container container_;
-    Functor functor_;   
+ private:
+  Container container_;
+  Functor functor_;
 };
 
-template<class Container, class Functor>
+template <class Container, class Functor>
 auto operator|(Container&& container, FilterIndicator<Functor>&& indicator) {
-    return FilterRange<Container, Functor>(
-        std::forward<Container>(container),
-        std::forward<Functor>(indicator.functor_)
-    );
+  return FilterRange<Container, Functor>(
+      std::forward<Container>(container),
+      std::forward<Functor>(indicator.functor_));
 }
 
 }  // namespace View

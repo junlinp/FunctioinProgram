@@ -1,7 +1,6 @@
 #include <gtest/gtest.h>
 #include "function_program.hpp"
 TEST(FP, TRANSFORM) {
-
     auto functor = fp::View::transform([](){ return 0;});
     functor.functor_();
     std::vector<int> base = {1, 2, 3, 4, 5};
