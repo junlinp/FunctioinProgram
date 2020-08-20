@@ -16,7 +16,7 @@ class ThreadPool {
         std::function<void(void)> task;
         {
           std::unique_lock<std::mutex> ulk(mutex_);
-          cv_.wait(ulk);
+          cv_.wait(ulk, [this]() { return b_stop || !tasks.empty(); });
 
           if (b_stop && tasks.empty()) {
             return;
@@ -41,12 +41,37 @@ class ThreadPool {
       thread.join();
     }
   }
+  template <class Functor, class... Args,
+            class ReturnType =
+                std::result_of_t<std::remove_reference_t<Functor>(Args...)>>
+  std::future<ReturnType> Enqueue(Functor&& functor, Args&&... args) {
+    auto f =
+        std::bind(std::forward<Functor>(functor), std::forward<Args>(args)...);
+    auto task = std::make_shared<std::packaged_task<ReturnType()>>(f);
+    auto future = task->get_future();
+    {
+      std::unique_lock<std::mutex> ulk(mutex_);
+      if (b_stop) {
+        throw std::runtime_error("ThreadPool has stopped.");
+      }
+      tasks.push([task]() { (*task)(); });
+    }
+    cv_.notify_one();
+    return future;
+  }
+
   template <class Functor, class ReturnType = std::result_of_t<
                                std::remove_reference_t<Functor>()>>
   std::future<ReturnType> Enqueue(Functor&& functor) {
     auto task = std::make_shared<std::packaged_task<ReturnType()>>(functor);
     auto future = task->get_future();
-    tasks.push([task]() { (*task)(); });
+    {
+      std::unique_lock<std::mutex> ulk(mutex_);
+      if (b_stop) {
+        throw std::runtime_error("ThreadPool has stopped.");
+      }
+      tasks.push([task]() { (*task)(); });
+    }
     cv_.notify_one();
     return future;
   }
