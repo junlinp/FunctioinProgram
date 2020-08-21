@@ -1,6 +1,7 @@
 #ifndef FUNCTION_PROGRAM_H_
 #define FUNCTION_PROGRAM_H_
 #include <numeric>
+#include "thread_pool.hpp"
 namespace fp {
 namespace View {
 
@@ -187,5 +188,42 @@ auto operator|(Container&& container, FilterIndicator<Functor>&& indicator) {
 }
 
 }  // namespace View
+
+namespace Action {
+template <class Functor>
+struct ParallelTransformIndicator {
+  ParallelTransformIndicator(Functor&& functor)
+      : functor_(std::forward<Functor>(functor)) {}
+  Functor functor_;
+};
+
+template <class Functor>
+ParallelTransformIndicator<Functor> ParallelTransform(Functor&& functor) {
+  return ParallelTransformIndicator<Functor>(std::forward<Functor>(functor));
+}
+
+template <class Container, class Functor,
+  class ResultType = std::result_of_t<Functor(typename Container::value_type)>>
+std::vector<ResultType>
+operator|(Container&& container,
+          ParallelTransformIndicator<Functor> indicator) {
+  std::vector<ResultType> res;
+  std::vector<std::future<ResultType>> future_res;
+  {
+    ThreadPool thread_pool;
+    std::transform(container.cbegin(), container.cend(),
+                   std::back_inserter(future_res),
+                   [&thread_pool, &indicator](const auto& element) {
+                     return thread_pool.Enqueue(
+                         std::forward<Functor>(indicator.functor_), element);
+                   });
+  }
+
+  std::transform(future_res.cbegin(), future_res.cend(), std::back_inserter(res),[](const auto& element){return element.get();});
+  return res;
+}
+
+}  // namespace Action
+
 }  // namespace fp
 #endif  // FUNCTION_PROGRAM_H_
