@@ -28,6 +28,18 @@ TEST(FP, TRANSFORM) {
     EXPECT_EQ(*begin, 4 * count);
     count++;
   }
+
+  // lazy-value
+  auto lazy = base | fp::View::transform([](int element) { return 3 * element;});
+  base[0] = -1;
+  EXPECT_EQ(*lazy.begin(), -3);
+
+  for(int i  = 0; i < 1024 * 1024; i++) {
+    int sum = 0;
+     for (const auto& element : lazy) {
+       sum += element;
+     }
+  }
 }
 
 TEST(FP, GET_KEY_VALUE) {

@@ -38,8 +38,8 @@ class TransformRange {
   class TransformRangeConstIterator
       : public std::iterator<std::forward_iterator_tag, const value_type> {
    public:
-    TransformRangeConstIterator(Iterator iterator, Functor functor)
-        : input_iterator_(iterator), functor_(std::forward<Functor>(functor)) {}
+    TransformRangeConstIterator(Iterator iterator,const Functor& functor)
+        : input_iterator_(iterator), functor_(functor) {}
     TransformRangeConstIterator(const TransformRangeConstIterator& other)
         : input_iterator_(other.input_iterator_), functor_(other.functor_) {}
     TransformRangeConstIterator& operator++() {
@@ -53,7 +53,7 @@ class TransformRange {
 
    private:
     Iterator input_iterator_;
-    Functor functor_;
+    const Functor& functor_;
   };
   using const_iterator = TransformRangeConstIterator<
       typename std::remove_reference_t<Container>::const_iterator>;
