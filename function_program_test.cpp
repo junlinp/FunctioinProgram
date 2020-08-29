@@ -4,6 +4,8 @@
 
 #include "thread_pool.hpp"
 
+#include "range/v3/all.hpp"
+
 TEST(FP, TRANSFORM) {
   auto functor = fp::View::transform([]() { return 0; });
   functor.functor_();
@@ -74,6 +76,14 @@ TEST(ThreadPool, Enqueue) {
   EXPECT_EQ(future.get(), 1);
 }
 
+TEST(Range, MAP) {
+  std::map<int, double> map_;
+  map_[1] = 1.0;
+  map_[2] = 2.0;
+  map_ | ranges::view::transform([](const auto& pair) {
+    return std::pair<int, double>(pair.first, pair.second * 2.0);
+  });
+}
 int main() {
   testing::InitGoogleTest();
   return RUN_ALL_TESTS();
